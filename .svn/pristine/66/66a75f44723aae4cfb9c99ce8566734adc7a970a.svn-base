@@ -1,0 +1,432 @@
+// This file contains a SUGGESTION for the structure of your program.  You
+// may change any of it, or add additional files to this directory (package),
+// as long as you conform to the project specification.
+
+// Comments that start with "//" are intended to be removed from your
+// solutions.
+package jump61;
+
+import static jump61.Side.*;
+import static jump61.Square.square;
+import java.util.ArrayList;
+import java.util.*;
+
+/** A Jump61 board state that may be modified.
+ *  @author
+ */
+class MutableBoard extends Board {
+
+    /** An N x N board in initial configuration. */
+    MutableBoard(int N) {
+        _newBoard = new Square[N][N];
+        _stackBoard = new Stack<Square[][]>();
+        _numPieces = this.size() * this.size();
+        _possibleMoves = new ArrayList<Integer>();
+
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+            _newBoard[i][j] = Square.square(WHITE, 1);
+            }
+        }
+    }
+
+    /** A board whose initial contents are copied from BOARD0, but whose
+     *  undo history is clear. */
+    MutableBoard(Board board0) {
+        int N = board0.size();
+        clear(N);
+        _newBoard = new Square[N][N];
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                _newBoard[i][j] = board0.get(i + 1, j + 1);
+            }
+        }
+    }
+
+    Square[][] getBoard() {
+        return _copyBoard;
+    }
+
+    void setBoard(Square[][] board) {
+        _newBoard = board;
+    }
+
+    void pushStack(Square[][] board) {
+        _stackBoard.push(board);
+    }
+
+    @Override
+    void clear(int N) {
+        _newBoard = new Square[N][N];
+        _stackBoard = new Stack<Square[][]>();
+        for (int i = 0; i < _newBoard.length; i++) {
+            for (int j = 0; j < _newBoard.length; j++) {
+                _newBoard[i][j] = Square.square(WHITE, 1);
+            }
+        }
+        _numPieces = this.size() * this.size();
+        announce();
+    }
+
+    @Override
+    void copy(Board board) {
+        _otherCopyBoard = new Square[board.size()][board.size()];
+        for (int i = 0; i < board.size(); i++) {
+            for (int j = 0; j < board.size(); j++) {
+                _otherCopyBoard[i][j] = board.get(i + 1, j + 1);
+            }
+        }
+        _newBoard = _otherCopyBoard;
+        
+    }
+
+    /** Copy the contents of BOARD into me, without modifying my undo
+     *  history.  Assumes BOARD and I have the same size. */
+    private void internalCopy(MutableBoard board) {
+        _undoCopyBoard = new Square[board.size()][board.size()];
+        for (int i = 0; i < board.size(); i++) {
+            for (int j = 0; j < board.size(); j++) {
+                _undoCopyBoard[i][j] = board.get(i + 1, j + 1);
+            }
+        }
+    }
+
+    @Override
+    int size() {
+        int length = _newBoard.length;
+        return length;
+    }
+
+    @Override
+    Square get(int n) {
+        int counter = 0;
+        for (int i = 0; i < _newBoard.length; i++) {
+            for (int j = 0; j < _newBoard.length; j++) {
+                if (counter == n) {
+                    counter = 0;
+                    return _newBoard[i][j];
+                } else {
+                    counter += 1;
+                }
+
+            }
+        }
+        return null;
+    }
+
+    @Override
+    int numOfSide(Side side) {
+        int counter = 0;
+        for (int i = 0; i < _newBoard.length; i++) {
+            for (int j = 0; j < _newBoard.length; j++) {
+                if (_newBoard[i][j].getSide() == side) {
+                    counter += 1;
+                }
+            }
+        }
+        return counter;
+    }
+
+    @Override
+    int numPieces() {
+        return _numPieces;
+    }
+
+    @Override
+    ArrayList<Integer> possibleMoves() {
+        return _possibleMoves;
+    }
+
+    @Override
+    void addSpot(Side player, int r, int c) { 
+        if (numOfSide(player) == _newBoard.length * _newBoard.length) {
+                this.getWinner(); 
+        } else {
+        _possibleMoves = new ArrayList<Integer>();
+        if (!makeLegal) {
+            internalCopy(this);
+            _stackBoard.push(_undoCopyBoard);
+        }
+        _numPieces += 1;
+        int n = sqNum(r, c);
+        int counter = 0;
+        if (isLegal(player, n) || this.makeLegal == true) { 
+            outerloop:
+            for (int i = 0; i < _newBoard.length; i++) {
+                for (int j = 0; j < _newBoard.length; j++) {
+                    if (counter == n) {
+                        if (i == 0 && j == 0 || i == (_newBoard.length - 1) && j == 0 || i == 0 && j == (_newBoard.length - 1) || i == (_newBoard.length - 1) && j == (_newBoard.length - 1)) {
+                            int prevSpots = 0;
+                            int currSpots = _newBoard[i][j].getSpots() + 1;
+                            if ((_newBoard[i][j].getSpots() + 1) > 2) {
+                                _newBoard[i][j] = Square.square(player, currSpots);
+                                if (numOfSide(player) == _newBoard.length * _newBoard.length) {
+                                    this.getWinner();
+                                    break outerloop;
+                                }
+                                currNeighbors(r, c, player, currSpots);
+                                break outerloop;
+                                } else {
+                                _newBoard[i][j] = Square.square(player, currSpots);
+                            }
+                        } else if (i == 0 || i == (_newBoard.length - 1) || j == 0 || j == (_newBoard.length - 1)) {
+                            int prevSpots = 0;
+                            int currSpots = _newBoard[i][j].getSpots() + 1;
+                            if ((_newBoard[i][j].getSpots() + 1) > 3) {
+                                _newBoard[i][j] = Square.square(player, currSpots);
+                                if (numOfSide(player) == _newBoard.length * _newBoard.length) {
+                                    this.getWinner();
+                                    break outerloop;
+                                }
+                                currNeighbors(r, c, player, currSpots);
+                                break outerloop;
+                            } else {
+                                _newBoard[i][j] = Square.square(player, currSpots);
+                            }                            
+                    } else {
+                            makeLegal = false;
+                            int prevSpots = 0;
+                            if ((_newBoard[i][j].getSpots() + 1) > 4) {   
+                                if (numOfSide(player) == _newBoard.length * _newBoard.length) {
+                                    this.getWinner();
+                                    break outerloop;
+                                } 
+                                int currSpots = _newBoard[i][j].getSpots();
+                                _newBoard[i][j] = Square.square(player, currSpots + 1);
+                                currNeighbors(r, c, player, currSpots);
+                                break outerloop;
+                                } else {
+                                prevSpots = _newBoard[i][j].getSpots();
+                                _newBoard[i][j] = Square.square(player, prevSpots + 1);
+                            }    
+                        } 
+                    }
+                    counter += 1;
+                }
+            }
+            }    
+        }
+        int newCount = 0;
+        for (int i = 0; i < _newBoard.length; i++) {
+            for (int j = 0; j < _newBoard.length; j++) {
+                if (player != _newBoard[i][j].getSide() || player == Side.WHITE) {
+                    _possibleMoves.add(newCount);
+                }
+                newCount += 1;
+            }
+        }  
+        announce();
+    }
+    @Override
+    void addSpot(Side player, int n) {        
+        if (!makeLegal) {
+            internalCopy(this);
+            _stackBoard.push(_undoCopyBoard);
+        }
+        _numPieces += 1;
+        int counter = 0;
+     
+        System.out.println("I'm just about to add to square n: " + n + " where it breaks and here's my board: ");
+        this.toString();
+        if (isLegal(player, n) || this.makeLegal == true) { 
+            outerloop:
+            for (int i = 0; i < _newBoard.length; i++) {
+                for (int j = 0; j < _newBoard.length; j++) {
+                    if (counter == n) {
+                        System.out.println("My N is: " + n);
+                        System.out.println("The corresponding coordinates should be: " + i + j);
+                        
+                        // Game.reportMove(player, i+1, j+1);
+                        if (i == 0 && j == 0 || i == (_newBoard.length - 1) && j == 0 || i == 0 && j == (_newBoard.length - 1) || i == (_newBoard.length - 1) && j == (_newBoard.length - 1)) {
+                            int prevSpots = 0;
+                            int currSpots = _newBoard[i][j].getSpots() + 1;
+                            System.out.println("ALPHAOMEGA");
+                            if ((_newBoard[i][j].getSpots() + 1) > 2) {
+                                _newBoard[i][j] = Square.square(player, currSpots);
+                                if (numOfSide(player) == _newBoard.length * _newBoard.length) {
+                                    this.getWinner();
+                                    break outerloop;
+                                }
+                                System.out.println("ALPHA");
+                                System.out.println("My actual coords are: " + i + " " + j);
+                                currNeighbors(i + 1, j + 1, player, currSpots);
+                                break outerloop;
+                                } else {
+                                System.out.println("This is the chosen code");
+                                _newBoard[i][j] = Square.square(player, currSpots);
+                            }
+                        } else if (i == 0 || i == (_newBoard.length - 1) || j == 0 || j == (_newBoard.length - 1)) {
+                            int prevSpots = 0;
+                            int currSpots = _newBoard[i][j].getSpots() + 1;
+                            if ((_newBoard[i][j].getSpots() + 1) > 3) {
+                                _newBoard[i][j] = Square.square(player, currSpots);
+                                if (numOfSide(player) == _newBoard.length * _newBoard.length) {
+                                    this.getWinner();
+                                    break outerloop;
+                                }
+                                _newBoard[i][j] = Square.square(player, currSpots);
+                                currNeighbors(i + 1, j + 1, player, currSpots);
+                                break outerloop;
+                            } else {
+                                _newBoard[i][j] = Square.square(player, currSpots);
+                            }                            
+                    } else {
+                            makeLegal = false;
+                            int prevSpots = 0;
+                            if ((_newBoard[i][j].getSpots() + 1) > 4) {
+                                if (numOfSide(player) == _newBoard.length * _newBoard.length) {
+                                    this.getWinner();
+                                    break outerloop;
+                                }   
+                                int currSpots = _newBoard[i][j].getSpots();
+                                _newBoard[i][j] = Square.square(player, currSpots + 1);
+                                currNeighbors(i + 1, j + 1, player, currSpots);
+                                break outerloop;
+                                } else {
+                                prevSpots = _newBoard[i][j].getSpots();
+                                _newBoard[i][j] = Square.square(player, prevSpots + 1);
+                            }    
+                        } 
+                    }
+                    counter += 1;
+                }
+            }
+            }    
+        announce();
+        System.out.println("I have just added a spot to square: " + n);
+        }
+    /** Helper function that returns how many spots left on main square. */
+    void currNeighbors(int r, int c, Side player, int spotsLeft) {
+        System.out.println("My r is: " + r);
+        System.out.println("My c is: " + c);
+
+        System.out.println("OMEGA");
+            makeLegal = true;
+            _newBoard[r-1][c-1] = Square.square(player, 1);
+            System.out.println("ETA");
+            if (r == 1 && c == 1) {     
+                System.out.println("Garcia");
+                this.addSpot(player, r, c + 1);
+                System.out.println("BETA");
+                this.addSpot(player, r + 1, c);
+                System.out.println("THETA");
+            } else if (r == _newBoard.length && c == 1) {    
+                System.out.println("problem with overfull");
+                this.addSpot(player, r, c + 1);
+                this.addSpot(player, r - 1, c);
+            } else if (c == 1) {                  
+                this.addSpot(player, r - 1, c);
+                this.addSpot(player, r + 1, c);
+                this.addSpot(player, r, c + 1);
+            } else if (r == 1 && c == _newBoard.length) {   
+                this.addSpot(player, r+1, c);   
+                this.addSpot(player, r, c-1);
+            } else if (r == 1 && c != _newBoard.length) {    
+                this.addSpot(player, r, c-1);
+                this.addSpot(player, r, c+1);
+                this.addSpot(player, r+1, c);
+            } else if (r == _newBoard.length && c != _newBoard.length) {       
+                this.addSpot(player, r, c-1);
+                this.addSpot(player, r, c+1);
+                this.addSpot(player, r-1, c);        
+            } else if (r == _newBoard.length && c == _newBoard.length) {
+                this.addSpot(player, r, c-1);
+                this.addSpot(player, r-1, c);
+            } else if (c == _newBoard.length) {
+                System.out.println("I'm tryna add to a side overfull where my r and c are: " + r + " " + c);
+                this.addSpot(player, r-1, c);
+                this.addSpot(player, r+1, c);
+                this.addSpot(player, r, c-1);
+
+                System.out.println("Things have all been affected");
+            } else {
+                this.addSpot(player, r-1, c);
+                this.addSpot(player, r+1, c);
+                this.addSpot(player, r, c-1);
+                this.addSpot(player, r, c+1);
+            }
+    }
+    @Override
+    void set(int r, int c, int num, Side player) {
+        internalSet(sqNum(r, c), square(player, num));
+    }
+
+    @Override
+    void set(int n, int num, Side player) {
+        internalSet(n, square(player, num));
+        announce();
+    }
+
+    @Override
+    void undo() {
+        _newBoard = _stackBoard.pop();
+    }
+
+    /** Record the beginning of a move in the undo history. */
+    private void markUndo() {
+    
+        
+    }
+
+    /** Set the contents of the square with index IND to SQ. Update counts
+     *  of numbers of squares of each color.  */
+    private void internalSet(int ind, Square sq) {
+        int counter = 0;
+        outerloop:
+        for (int i = 0; i < _newBoard.length; i++) {
+            for (int j = 0; j < _newBoard.length; j++) {
+                if (counter == ind) {
+                    _newBoard[i][j] = sq;
+                    break outerloop;
+                } else {
+                    counter += 1;
+                }
+
+            }
+        }
+    }
+
+
+    /** Notify all Observers of a change. */
+    private void announce() {
+        setChanged();
+        notifyObservers();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof MutableBoard)) {
+            return obj.equals(this);
+        } else {
+            // REPLACE WITH SOLUTION
+            return false;
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        // REPLACE WITH SOLUTION.  RETURN A NUMBER THAT IS THE SAME FOR BOARDS
+        // WITH IDENTICAL CONTENTS (IT NEED NOT BE DIFFERENT IF THE BOARDS
+        // DIFFER.)  THE CURRENT STATEMENT WORKS, BUT IS NOT PARTICULARLY
+        // EFFICIENT.
+        return 0;
+    }
+
+    private Square[][] _newBoard;
+
+    private Square[][] _copyBoard;
+
+    private Square[][] _undoCopyBoard;
+
+    private Square[][] _otherCopyBoard;
+
+    private Stack<Square[][]> _stackBoard;
+
+    private int _numPieces;
+
+    private boolean makeLegal;
+
+    private ArrayList<Integer> _possibleMoves;
+
+
+}

@@ -1,0 +1,332 @@
+// This file contains a SUGGESTION for the structure of your program.  You
+// may change any of it, or add additional files to this directory (package),
+// as long as you conform to the project specification.
+
+// Comments that start with "//" are intended to be removed from your
+// solutions.
+package jump61;
+
+import java.util.ArrayList;
+import jump61.MutableBoard;
+import java.util.Collections;
+
+
+/** An automated Player.
+ *  @Yuxi Chen
+ */
+class AI extends Player {
+
+    /** Time allotted to all but final search depth (milliseconds). */
+    private static final long TIME_LIMIT = 15000;
+
+    /** Number of calls to minmax between checks of elapsed time. */
+    private static final long TIME_CHECK_INTERVAL = 10000;
+
+    /** Number of milliseconds in one second. */
+    private static final double MILLIS = 1000.0;
+
+    private static enum Strategy {TWO_TWO, RANDOM};
+
+    private static final Strategy strategy = Strategy.TWO_TWO;
+
+    /** A new player of GAME initially playing COLOR that chooses
+     *  moves automatically.
+     */
+    AI(Game game, Side color) {
+        super(game, color);
+        currGame = game;
+        couldMoves = new ArrayList<Integer>();   // this holds all the possible moves that I acn make.
+        bestMoves = new ArrayList<Integer>();
+        bestMoveSoFar = -1;
+        bestScore = 1000;
+        currMove = -1;
+        depthZeroValues = new ArrayList<Integer>();
+        level = 3;
+        bestMove = 0;
+    }
+
+
+    /** ; */
+    @Override
+    void makeMove() {
+        currBoard = currGame.getBoard();
+        MutableBoard copiedBoard = new MutableBoard(currBoard);
+        Square[][] copiedArray = new Square[copiedBoard.size()][copiedBoard.size()];
+        for (int i = 0; i < copiedBoard.size(); i++) {
+            for (int j = 0; j < copiedBoard.size(); j++) {
+                copiedArray[i][j] = currBoard.get(i+1, j+1);
+            }
+        }
+
+        copiedBoard.setBoard(copiedArray);
+        System.out.println("I could get here");
+        copiedBoard.pushStack(copiedArray);
+        couldMoves = currGame.possibleMoves();  
+
+        System.out.println("level AAA" + level);
+
+        System.out.println(currBoard.whoseMove());
+        System.out.println(couldMoves.size());
+        bestMove = getBestMove(currBoard.whoseMove(), copiedBoard, couldMoves);
+
+        // System.out.println(bestMove);
+
+        // bestMove = minmax(currBoard.whoseMove(), copiedBoard, 3, 4, couldMoves);
+
+
+        getGame().reportMove(Side.BLUE, 1, 1);
+        // getGame().makeMove(couldMoves.get(bestMove));
+
+        getGame().makeMove(2);
+        // System.out.println("My bestmovesofar is: " + bestMoveSoFar);
+
+        // System.out.println("After blue's move, board looks like this:");
+        // copiedBoard.toString();
+
+
+    }
+
+
+    /** This will give us back the best move possible. */
+    private int getBestMove(Side p, MutableBoard b, ArrayList<Integer> moves) {
+        // int bestMoveSoFar = -1;
+        // int bestScore = -1000;
+
+        ArrayList<Integer> nextPlayerMoves = new ArrayList<Integer>(); 
+        MutableBoard clone = new MutableBoard(b);
+
+
+        int sqNum = 0;
+        for (int move : moves) {
+            System.out.println("I HAVE RISEN TO THE NEXT LEVEL!" + "I'm in branch :" + move);
+            currMove = move;     //This will tell us which branch we're dealing with. 
+            b.toString();
+            clone = new MutableBoard(b);
+            clone.addSpot(p, move);
+
+            System.out.println("GAVINN");
+
+
+            System.out.println("right below me is the clone board");
+            clone.toString();
+
+
+            System.out.println("The size of my board is: " + clone.size() + "current p is: " + p);
+            for (int i = 0; i < clone.size(); i++) {   // this goes through and then obtains a list of places that red can go. 
+                for (int j = 0; j < clone.size(); j++) {
+                    System.out.println(clone.get(i+1, j+1).getSide());
+                    System.out.println(p.opposite());
+                    if (clone.get(i+1, j+1).getSide() == p.opposite() ||
+                        clone.get(i+1, j+1).getSide() == Side.WHITE)
+                     {
+                        nextPlayerMoves.add(sqNum);
+                    }
+                    sqNum += 1;
+                }
+            }
+            sqNum = 0;
+            System.out.println("MY DEPTH IS " + level);
+            int currMM = minmax(p.opposite(), clone, level, 10, nextPlayerMoves); 
+        //     System.out.println("Do we get to this outer loop's finished");
+            b.toString();
+            System.out.println("This is what my board looks like after my recursive calls");
+            // break;
+        }
+        return bestMoveSoFar;
+    }
+
+    /** Return the minimum of CUTOFF and the minmax value of board B
+     *  (which must be mutable) for player P to a search depth of D
+     *  (where D == 0 denotes statically evaluating just the next move).
+     *  If MOVES is not null and CUTOFF is not exceeded, set MOVES to
+     *  a list of all highest-scoring moves for P; clear it if
+     *  non-null and CUTOFF is exceeded. the contents of B are
+     *  invariant over this call. */
+
+
+    private int minmax(Side p, Board b, int d, int cutoff,    
+                       ArrayList<Integer> moves) {
+        ArrayList<Integer> newMoves = new ArrayList<Integer>();
+        MutableBoard clone1 = new MutableBoard(b);
+
+        int sqNum;
+        sqNum = 0;
+        int hello;
+        System.out.println("I HAVE ARRIVED IN MINMAX and my moves are: " + moves);
+        System.out.println("My level is: " + level + " and my p is: " + p);
+
+        int currScore = 0;
+        if (moves.isEmpty()) {
+            System.out.println("Our moves are empty, red cannot go anywhere");
+            if (-50 < bestScore) {
+                bestScore = -50;
+                bestMove = currMove;
+            }
+            return -50;
+        }
+        if (level > 0) {
+            System.out.println("I just arrived in this while loop, level is: " + level);
+            for (int move : moves) {    // in here our moves will be all the possible moves of red. 
+                System.out.println("The thing that broke this thing is: " + move);
+                clone1 = new MutableBoard(b);
+                clone1.addSpot(p, move);
+                System.out.println(moves);
+                System.out.println("At level: " + level + " our current thing looks like: ");
+                clone1.toString();
+
+                for (int i = 0; i < clone1.size(); i++) {
+                    for (int j = 0; j < clone1.size(); j++) {
+                        if (sqNum == clone1.size()) {
+                                sqNum = 0;
+                            }
+                        if (level == 3) {
+                            System.out.println(p.opposite());
+                            if (clone1.numOfSide(p) == clone1.size() * clone1.size()) {
+                                System.out.println("This is a pretty bad move for us");
+                                return 100;
+                            }
+                            System.out.println("My current level is 3.");
+                            System.out.println(clone1.get(i+1, j+1).getSide());
+                            System.out.println(p.opposite());
+                            if (clone1.get(i+1, j+1).getSide() != p.opposite() || 
+                                clone1.get(i+1, j+1).getSide() == Side.WHITE) {
+                                newMoves.add(sqNum);
+                                System.out.println("I have just added " + sqNum);
+                            }
+                        }
+                        if (level == 2) {
+                            System.out.println("I should be adding in a bunch of red moves");
+                            System.out.println(clone1.get(i+1, j+1).getSide());
+                            System.out.println(p.opposite());
+                            if (clone1.get(i+1, j+1).getSide() == p.opposite() || 
+                                clone1.get(i+1, j+1).getSide() == Side.WHITE) {
+                                // System.out.println("The move that I just added in is: " + sqNum);
+                                newMoves.add(sqNum);
+                                // System.out.println("I have added a move "+ sqNum + "to my list.");
+                            }
+                        } else if (level == 1) {
+                            // System.out.println("Do i even get in here");
+                            System.out.println(clone1.get(i+1, j+1).getSide());
+                            System.out.println(p.opposite());
+                            if (clone1.numOfSide(p.opposite()) == clone1.size() * clone1.size()) {
+                                System.out.println("I have found a great board");
+                                bestScore = -50;
+                                bestMoveSoFar = currMove;
+                                return -50;
+                            }
+                            if (clone1.get(i+1, j+1).getSide() != p.opposite()) {
+                                // System.out.println("I have added a move " + sqNum + " to my list.");
+                                // System.out.println("The size of my moves: " + moves);
+                                newMoves.add(sqNum);
+                            }
+
+                        } else if (level == 0) {
+                            System.out.println("We reached 0, time to break");
+                            break;
+                        }
+
+                        
+                        sqNum += 1;
+                    }
+                }
+                // System.out.println("I'm about to go one level down:");
+                // System.out.println(newMoves);
+                // System.out.println("What does my board look like after my undo?");
+            
+        }
+        level -= 1;
+        hello = minmax(p.opposite(), clone1, level, 5, newMoves);
+        
+
+        // System.out.println("My level has reached zero here and my branch is " + currMove);
+        // System.out.println(level);
+        // System.out.println(moves);
+        if (level == 0) {
+            for (int move : moves) {
+                // System.out.println("The move that I was trying to do before my stuff broke was: " + move);
+                Board clone2 = new MutableBoard(b);
+
+                clone2.addSpot(p, move);
+                // b.toString();
+                clone2.toString();
+
+                currScore = staticEval(p, clone2);
+                if (currScore <= bestScore) {
+                    bestMoveSoFar = currMove;
+                    bestScore = currScore;
+                    // System.out.println(currMove);
+                }
+                depthZeroValues.add(currScore);
+            }
+            // System.out.println("I finally got here!!!!!!");
+            return Collections.max(depthZeroValues); 
+            }
+
+            
+        }
+    System.out.println("I got here which shouldn't happen");
+    return 0;        
+    }
+    /** Returns heuristic value of board B for player P.
+     *  Higher is better for P. */
+    private int staticEval(Side p, Board b) {
+        // System.out.println("STATICEVALLLL");
+        // b.toString();
+        System.out.println("The number of AI squares is: " + b.numOfSide(p.opposite()));
+        System.out.println("The number of red squares is: " + b.numOfSide(p));
+
+        return b.numOfSide(p.opposite()) - b.numOfSide(p);
+    }
+
+    // Move findBestMove (Player side, Position start, int depth, int cutoff) {
+    //     if (start is a won position for who) {
+    //         return WON_GAME;
+    //     } else if (start is a lost position for who) {
+    //         return LOST_GAME;
+    //     } else if (depth == 0) {
+    //         return guessBestMove(who, start, cutoff);
+    //     }
+    //     Move bestSoFar = Move.REALLY_BAD_MOVE;
+    //     for (each legal move M, for who from position start) {
+    //         Position next = start.makeMove(M);
+    //         Move response = findBestMove(who.opponent(), next, depth - 1, -bestSoFar.value());
+    //         if (-response.value() > bestSoFar.value()) {
+    //             Set Ms value to -response.value();
+    //             bestSoFar = M;
+    //             if (M.value () >= cutoff) {
+    //                 break;
+    //             }
+    //         }
+    //         return bestSoFar;
+    //     }
+
+    // }
+
+    // Move guessBestMove(Player who )
+
+
+    // }
+    private ArrayList<Integer> bestMoves;
+    private ArrayList<Integer> couldMoves;
+
+    private int bestMoveSoFar;
+    private int bestScore;
+    private int currMove;
+    private int bestMove;
+
+    private Game currGame;
+
+    private Board currBoard;
+    
+    private int level;
+    private ArrayList<Integer> depthZeroValues;
+    
+}
+
+    
+
+
+
+
+
+
